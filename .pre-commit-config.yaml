@@ -1,0 +1,70 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-ast
+      - id: end-of-file-fixer
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.3.1
+    hooks:
+      - id: pyupgrade
+        args: [ --py310-plus ]
+
+  - repo: https://github.com/psf/black
+    rev: 22.8.0
+    hooks:
+      - id: black
+        args: [ "--line-length=140", "--target-version=py310" ]
+        exclude: ^(\.git/|\.idea/)
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: [ "--max-line-length=140" ]
+        exclude: .*/(migrations)($|/.*)
+
+  - repo: https://github.com/asottile/reorder_python_imports
+    rev: v3.8.2
+    hooks:
+      - id: reorder-python-imports
+        args: [ "--application-directories=src/", --py310-plus ]
+
+  # Linting check
+  - repo: https://github.com/pycqa/pylint
+    rev: v2.16.2
+    hooks:
+      - id: pylint
+        language: python
+        types: [ python ]
+        exclude: ^(migrations|tests)|[a-zA-Z]*/(migrations)/(.)*
+        additional_dependencies:
+          - pylint_django
+        args:
+          - --disable=C0114,C0116,C0115,E0401,E0611,R0903,R0913,C2801,C0415,W0613,W0212,W0611,W0718,C0103,R0914,C0209,W0622,R1719,W0511
+          - --max-line-length=140
+          - -d duplicate-code
+
+  # Security check
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.4
+    hooks:
+      - id: bandit
+        exclude: (tests)($|/.*)
+
+  #  # Testing check
+  #  - repo: local
+  #    hooks:
+  #      - id: pytest-check
+  #        name: pytest-check
+  #        stages: [ commit ]
+  #        types: [ python ]
+  #        entry: pytest
+  #        args: [ "-v", "tests/" ]
+  #        language: system
+  #        pass_filenames: false
+  #        always_run: true

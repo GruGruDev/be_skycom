@@ -1,0 +1,84 @@
+stages:
+  - test
+  - build
+  - deploy
+
+variables:
+  TAG_COMMIT_PROD_TAM: $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_COMMIT_SHA/prod-tam
+  TAG_COMMIT_STAGING_TAM: $CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/$CI_COMMIT_SHA/staging-tam
+
+test_prod:
+  image: python:3.10.11-slim-bullseye
+  stage: test
+  script:
+    - apt update && apt install -y --no-install-recommends git
+    - pip install pre-commit
+    - pip install -r requirements_test.txt
+    - echo "--------------- Pre-commit Tests ---------------"
+    - pre-commit install
+    - pre-commit run --all-files
+    - echo "--------------- Pytest Tests ---------------------"
+    # Make env file
+    - chmod +x ./k8s/tam-prod/scripts/setup_env.sh
+    - bash ./k8s/tam-prod/scripts/setup_env.sh
+    - python -m pytest
+    - echo "--------------- Tests Done ---------------------"
+  artifacts:
+    expire_in: 3 days
+    paths:
+      - .coverage
+  only:
+    - k8s-tam-main
+  when: manual
+  tags:
+    - k8s-on-premises
+
+build_tam_prod:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.0-debug
+    entrypoint: [""]
+  variables:
+    GODEBUG: "http2client=0"
+  services:
+    - docker:24.0.5-dind
+  script:
+    # Make env file
+    - chmod +x ./k8s/tam-prod/scripts/setup_env.sh
+    - ./k8s/tam-prod/scripts/setup_env.sh
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${K8S_ONPREM_REGISTRY_RW_USERNAME}" "${K8S_ONPREM_REGISTRY_RW_PASSWORD}" | base64 | tr -d '\n')\"},\"$(echo -n $CI_DEPENDENCY_PROXY_SERVER | awk -F[:] '{print $1}')\":{\"auth\":\"$(printf "%s:%s" ${CI_DEPENDENCY_PROXY_USER} "${CI_DEPENDENCY_PROXY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/k8s/tam-prod/Dockerfile"
+      --destination "${TAG_COMMIT_PROD_TAM}"
+  only:
+    - k8s-tam-main
+  when: manual
+  tags:
+    - k8s-on-premises
+
+deploy_tam_prod:
+  image:
+    name: bitnami/kubectl:1.29
+    entrypoint: [""]
+  stage: deploy
+  before_script:
+    - cat "$K8S_ONPREM_CA" > k8s-ca.crt
+    - cat "$K8S_ONPREM_CI_DEV_KEY" > ci-dev.key
+    # setting up k8s cred
+    - kubectl config set-cluster skycom-cluster --server="$K8S_ONPREM_URL" --insecure-skip-tls-verify=true
+    - kubectl config set-credentials ci-dev --client-certificate=./k8s-ca.crt --client-key=./ci-dev.key
+    - kubectl config set-context ci-dev-context --cluster=skycom-cluster --user=ci-dev
+    - kubectl config use-context ci-dev-context
+  script:
+    # Update deployment file
+    - sed -i "s#<IMAGE>#${TAG_COMMIT_PROD_TAM}#" ./k8s/tam-prod/server/app-tam.yml
+    # Deploy to k8s self-host
+    - kubectl apply -f ./k8s/tam-prod/server
+  only:
+    - k8s-tam-main
+  when: manual
+  needs:
+    - build_tam_prod
+  tags:
+    - k8s-on-premises
