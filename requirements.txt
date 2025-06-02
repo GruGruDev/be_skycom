@@ -1,0 +1,74 @@
+# Django
+Django>=4.2,<=5.0
+
+# DRF
+djangorestframework==3.14.0
+django-model-utils==4.4.0
+django-rest-auth==0.9.5
+django_filter==24.1
+django-simple-history==3.5.0
+django-cors-headers==4.3.1
+# JWT
+djangorestframework-simplejwt[crypto]==5.3.1
+
+# Python-PostgreSQL Database Adapter
+# psycopg2>=2.8
+psycopg2-binary==2.9.9
+
+# WSGI Handler
+gunicorn==21.2.0
+uvicorn[standard]==0.28.0
+
+# Document
+drf-yasg==1.21.7
+
+# Dataframe
+pandas==2.2.1
+openpyxl==3.1.2
+
+# Database
+# django-bulk-update-or-create
+redis==5.0.3
+django-redis==5.4.0
+
+# Pillow
+pillow==10.0.0
+
+# Background Task
+celery==5.3.6
+flower==2.0.1
+django-celery-beat==2.6.0
+
+# Dateutils
+python-dateutil==2.9.0.post0
+
+# Fotmart code
+pre-commit==3.6.2
+
+django-stubs[compatible-mypy]==4.2.7
+
+# docs
+coreapi==2.3.3
+pyyaml
+
+# utils
+Unidecode==1.3.6
+django-bulk-update-or-create==0.3.0
+
+# User Agent
+user-agents==2.2.0
+
+# storages
+Pillow==10.0.0
+django-storages==1.13.2
+boto3==1.28.36
+
+XlsxWriter==3.1.9
+
+django-allow-cidr==0.7.1
+
+memphis-py==1.3.1
+pycryptodome==3.20.0
+
+# sentry
+sentry-sdk==2.10.0
