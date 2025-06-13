@@ -233,28 +233,43 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_SIGNATURE_VERSION = "s3v4"
+
+
+
+#if not DEBUG:
+    # =================================================================== #
+    # CÀI ĐẶT CHO MÔI TRƯỜNG PRODUCTION (khi DEBUG=False)                  #
+    # =================================================================== #
 parsed_url = urlparse(AWS_S3_ENDPOINT_URL)  # remove https://
 AWS_S3_CUSTOM_DOMAIN = f"{parsed_url.netloc}/{AWS_STORAGE_BUCKET_NAME}"
 
 URL_ROOT = os.environ.get("URL_ROOT", "")
 STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        "OPTIONS": {"location": f"{URL_ROOT}/media"},
-    },
-    "staticfiles": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        "OPTIONS": {
-            "location": f"{URL_ROOT}/static",
-            "object_parameters": {"CacheControl": "max-age=86400"},
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {"location": f"{URL_ROOT}/media".lstrip("/")},
         },
-    },
-}
-
-STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{URL_ROOT}/static/"
-MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{URL_ROOT}/media/"
-
+        "staticfiles": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "location": f"{URL_ROOT}/static".lstrip("/"),
+                "object_parameters": {"CacheControl": "max-age=86400"},
+            },
+        },
+    }
+AWS_S3_CUSTOM_DOMAIN = f"{urlparse(AWS_S3_ENDPOINT_URL).netloc}/{AWS_STORAGE_BUCKET_NAME}"
+STATIC_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{URL_ROOT}/static/".replace('//', '/')
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{URL_ROOT}/media/".replace('//', '/')
 IMAGE_BASE_URL = MEDIA_URL
+# else:
+#    # =================================================================== #
+#    # CÀI ĐẶT CHO MÔI TRƯỜNG DEVELOPMENT (khi DEBUG=True)                 #
+#   # =================================================================== #
+#   STATIC_URL = "/static/"
+#   STATIC_ROOT = BASE_DIR / "staticfiles"
+#   MEDIA_URL = "/media/"
+#   MEDIA_ROOT = BASE_DIR / "media"
+#   IMAGE_BASE_URL = MEDIA_URL
 
 # SET MAX SIZE UPLOAD FILE
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5 MB
