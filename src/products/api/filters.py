@@ -1,5 +1,6 @@
 import django_filters.rest_framework as django_filters
 from django.db import models
+from django.db.models import Q
 from django_filters.conf import settings
 from django_filters.filterset import remote_queryset
 
@@ -15,14 +16,15 @@ from products.models import ProductsVariantsMaterials
 
 
 class ProductFilterset(django_filters.FilterSet):
-
     total_inventory_min = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="gte")
-
     total_inventory_max = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="lte")
-
     total_variants_min = django_filters.NumberFilter(field_name="total_variants", lookup_expr="gte")
-
     total_variants_max = django_filters.NumberFilter(field_name="total_variants", lookup_expr="lte")
+    inventory_status = django_filters.ChoiceFilter(
+        choices=(("in_stock", "In Stock"), ("out_of_stock", "Out of Stock")),
+        method="filter_inventory_status",
+        label="Inventory Status",
+    )
 
     class Meta:
         model = Products
@@ -36,6 +38,7 @@ class ProductFilterset(django_filters.FilterSet):
             "total_inventory_max",
             "total_variants_min",
             "total_variants_max",
+            "inventory_status",
         ]
         filter_overrides = {
             models.ForeignKey: {
@@ -47,6 +50,13 @@ class ProductFilterset(django_filters.FilterSet):
                 },
             },
         }
+    
+    def filter_inventory_status(self, queryset, name, value):
+        if value == "in_stock":
+            return queryset.filter(total_inventory__gt=0)
+        if value == "out_of_stock":
+            return queryset.filter(Q(total_inventory__lte=0) | Q(total_inventory__isnull=True))
+        return queryset
 
 
 class ProductVariantFilterset(django_filters.FilterSet):
@@ -65,12 +75,12 @@ class ProductVariantFilterset(django_filters.FilterSet):
     )
 
     total_inventory_min = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="gte")
-
     total_inventory_max = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="lte")
-
-    # total_weight_min = django_filters.NumberFilter(field_name="total_weight", lookup_expr="gte")
-    #
-    # total_weight_max = django_filters.NumberFilter(field_name="total_weight", lookup_expr="lte")
+    inventory_status = django_filters.ChoiceFilter(
+        choices=(("in_stock", "In Stock"), ("out_of_stock", "Out of Stock")),
+        method="filter_inventory_status",
+        label="Inventory Status",
+    )
 
     class Meta:
         model = ProductsVariants
@@ -84,9 +94,15 @@ class ProductVariantFilterset(django_filters.FilterSet):
             "is_active",
             "total_inventory_min",
             "total_inventory_max",
-            # "total_weight_min",
-            # "total_weight_max",
+            "inventory_status",
         )
+
+    def filter_inventory_status(self, queryset, name, value):
+        if value == "in_stock":
+            return queryset.filter(total_inventory__gt=0)
+        if value == "out_of_stock":
+            return queryset.filter(Q(total_inventory__lte=0) | Q(total_inventory__isnull=True))
+        return queryset
 
 
 class ProductMaterialFilterset(django_filters.FilterSet):
@@ -101,9 +117,6 @@ class ProductMaterialFilterset(django_filters.FilterSet):
     class Meta:
         model = ProductsMaterials
         fields = ("created_by", "modified_by", "variant", "status", "is_active")
-
-    # def filter_variant_id(self, queryset, name, value):
-    #     return queryset.filter(variants__id=value)
 
 
 class ProductVariantMaterialFilterset(django_filters.FilterSet):
@@ -131,12 +144,8 @@ class ProductVariantBatchFilterset(django_filters.FilterSet):
 
 
 class ProductReportsFilterset(django_filters.FilterSet):
-
     created_from = django_filters.DateFilter(field_name="created__date", lookup_expr="gte")
     created_to = django_filters.DateFilter(field_name="created__date", lookup_expr="lte")
-    # products = django_filters.ModelMultipleChoiceFilter(
-    #     field_name="line_items__variant__SKU_code", queryset=ProductsVariants.objects.all(), label="product"
-    # )
 
     class Meta:
         model = ProductsVariants
@@ -144,7 +153,6 @@ class ProductReportsFilterset(django_filters.FilterSet):
 
 
 class ProductCategoryFilterset(django_filters.FilterSet):
-
     total_inventory_min = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="gte")
     total_inventory_max = django_filters.NumberFilter(field_name="total_inventory", lookup_expr="lte")
 
@@ -156,10 +164,8 @@ class ProductCategoryFilterset(django_filters.FilterSet):
 class ProductVariantRevenueFilterset(django_filters.FilterSet):
     inventory_quantity_from = django_filters.NumberFilter(field_name="inventory_quantity", lookup_expr="gte")
     inventory_quantity_to = django_filters.NumberFilter(field_name="inventory_quantity", lookup_expr="lte")
-
     sold_quantity_from = django_filters.NumberFilter(field_name="sold_quantity", lookup_expr="gte")
     sold_quantity_to = django_filters.NumberFilter(field_name="sold_quantity", lookup_expr="lte")
-
     revenue_from = django_filters.NumberFilter(field_name="revenue", lookup_expr="gte")
     revenue_to = django_filters.NumberFilter(field_name="revenue", lookup_expr="lte")
     
