@@ -18,8 +18,9 @@ from products.models import ProductsVariantsMaterials
 from products.models import ProductTag
 from products.reports import ProductReportPivot
 from utils.reports import BindingExprEnum
+from users.utils import has_custom_permission # Import hàm mới
 
-
+# ... (Giữ nguyên các serializer từ CategorySerializer đến ProductVariantReadMaterialBaseSerializer) ...
 class CategorySerializer(serializers.ModelSerializer):
     total_products = serializers.IntegerField(read_only=True)
     total_inventory = serializers.IntegerField(read_only=True)
@@ -118,7 +119,23 @@ class ProductVariantsSerializer(serializers.ModelSerializer):
             "modified_by": {"read_only": True},
         }
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get("request")
 
+        if request and hasattr(request, "user") and request.user.is_authenticated:
+            user = request.user
+            # Thay thế user.has_perm bằng hàm kiểm tra tùy chỉnh
+            if not has_custom_permission(user, "products.view_variant_image"):
+                ret.pop("images", None)
+        else:
+            # Nếu không xác thực được user, mặc định ẩn ảnh
+            ret.pop("images", None)
+
+        return ret
+
+
+# ... (Giữ nguyên các serializer từ ProductVariantCreateSerializer đến ProductVariantComboDetailRetrieveSerializer) ...
 class ProductVariantCreateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(
         many=True, queryset=ProductTag.objects.all(), required=False
@@ -212,8 +229,6 @@ class ProductVariantUpdateSerializer(ProductVariantCreateSerializer):
         extra_kwargs = {
             "created_by": {"read_only": True},
             "modified_by": {"read_only": True},
-            # "SKU_code": {"read_only": True},
-            # "bar_code": {"read_only": True},
             "product": {"read_only": True},
             "type": {"read_only": True},
         }
@@ -235,8 +250,6 @@ class ProductVariantComboDetailRetrieveSerializer(serializers.ModelSerializer):
 
 
 class ProductVariantRetrieveSerializer(serializers.ModelSerializer):
-    # combo_variants = ProductVariantComboDetailRetrieveSerializer(many=True, required=False)
-    # tags = TagSerializer(many=True)
     images = ImagesReadBaseSerializer(many=True, read_only=True)
     total_inventory = serializers.SerializerMethodField(read_only=True)
     total_weight = serializers.SerializerMethodField(read_only=True)
@@ -271,10 +284,21 @@ class ProductVariantRetrieveSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
-        ret["total_material_quantity"] = len(ret["materials"])
+        request = self.context.get("request")
+
+        if request and hasattr(request, "user") and request.user.is_authenticated:
+            user = request.user
+            # Thay thế user.has_perm bằng hàm kiểm tra tùy chỉnh
+            if not has_custom_permission(user, "products.view_variant_image"):
+                ret.pop("images", None)
+        else:
+            ret.pop("images", None)
+
+        ret["total_material_quantity"] = len(ret.get("materials", []))
         return ret
 
 
+# ... (Giữ nguyên phần còn lại của file) ...
 class ProductMaterialReadVariantBaseSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source="product_variant.id")
     name = serializers.CharField(source="product_variant.name")
@@ -519,7 +543,6 @@ class ResultProductPivotResponse(serializers.Serializer):
     batches__id = serializers.CharField(help_text="Mã lô hàng")
     batches__name = serializers.CharField(help_text="Tên lô hàng")
     sheet_type = serializers.CharField(help_text="Loại sheet")
-    # metric
     total_revenue = serializers.FloatField(help_text="Total Revenue")
     total_actual_revenue = serializers.FloatField(
         help_text="Actual Revenue: Total value of goods sold after subtracting discounts"
@@ -594,7 +617,6 @@ class ImportProductVariantSerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
 
-        print("🚀 ~ product:", product)
         attrs["product"] = product
         attrs["bar_code"] = product.SKU_code
         return attrs

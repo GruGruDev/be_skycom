@@ -82,16 +82,9 @@ class UserViewSet(CustomModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        # Chỉ super admin mới có quyền chỉnh sửa thông tin của người dùng khác
-        # Còn lại họ chỉ có thể chỉnh sửa thông tin của chính họ
-        # if not user_from_token.is_superuser and user_from_token.pk != instance.pk:
-        #     raise PermissionDenied()
-        # Update user
         self.perform_update(serializer)
 
         if getattr(instance, "_prefetched_objects_cache", None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
@@ -101,7 +94,9 @@ class ProfileAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return Response(serializers.UserReadOneSerializer(request.user).data, status=status.HTTP_200_OK)
+        # Sửa lỗi: Lấy lại thông tin user từ database để đảm bảo có đủ dữ liệu
+        user_from_db = User.objects.get(pk=request.user.pk)
+        return Response(serializers.UserReadOneSerializer(user_from_db).data, status=status.HTTP_200_OK)
 
 
 class UserRoleViewSet(CustomModelViewSet):

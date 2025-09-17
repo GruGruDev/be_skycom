@@ -141,3 +141,37 @@ def create_message(action_type, model_name, instance):
 
 def get_action_name(app_label):
     return CONVERT_APP_LABEL.get(app_label, app_label)
+
+# =================================================================
+# HÀM KIỂM TRA QUYỀN MỚI ĐƯỢC THÊM VÀO
+# =================================================================
+def has_custom_permission(user, perm_codename):
+    """
+    Kiểm tra quyền của người dùng dựa trên trường JSON `data` của Role.
+    """
+    if not user.is_authenticated:
+        return False
+
+    if user.is_superuser:
+        return True
+
+    if not hasattr(user, 'role') or user.role is None or not isinstance(user.role.data, dict):
+        return False
+
+    role_data = user.role.data
+    
+    # Tách codename thành app_label và action, vd: "products.view_variant_image"
+    # perm_parts = perm_codename.split('.')
+    # if len(perm_parts) != 2:
+    #     return False
+    # app_label, action = perm_parts
+
+    # if app_label in role_data and isinstance(role_data[app_label], dict):
+    #     if action in role_data[app_label]:
+    #         return True
+
+    for group, perms in role_data.items():
+      if isinstance(perms, dict) and perm_codename in perms:
+        return True
+
+    return False

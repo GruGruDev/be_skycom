@@ -8,9 +8,25 @@ from users.models import UserActionLog
 
 
 class UserRoleSerializer(serializers.ModelSerializer):
+    # Thêm một trường mới để xử lý và trả về danh sách permissions
+    permissions = serializers.SerializerMethodField()
+
     class Meta:
         model = Role
-        fields = ("id", "name", "data", "default_router")
+        # Thêm "permissions" vào danh sách các trường để response trả về có trường này
+        fields = ("id", "name", "data", "default_router", "permissions")
+
+    # Hàm này sẽ lấy dữ liệu từ trường `data` và chuyển thành một danh sách permissions
+    def get_permissions(self, obj):
+        permission_list = []
+        # Kiểm tra xem `data` có phải là một dict không
+        if isinstance(obj.data, dict):
+            # Lặp qua các nhóm quyền (vd: "product", "order")
+            for group, perms in obj.data.items():
+                if isinstance(perms, dict):
+                    # Lấy tất cả các key (chính là codename của quyền) và thêm vào danh sách
+                    permission_list.extend(perms.keys())
+        return permission_list
 
 
 class UserDepartmentSerializer(serializers.ModelSerializer):
@@ -145,9 +161,7 @@ class UserActionLogListSerializerList(serializers.ModelSerializer):
         fields = ("user", "action_time", "action_type", "object_id", "content_type_id", "action_name", "message")
 
     def to_representation(self, instance):
-        # Gọi to_representation từ lớp cha và lưu kết quả vào biến
         representation = super().to_representation(instance)
-        # Thêm trường mới vào từ điển
         representation["instance_name"] = instance.content_type.model_class().__name__ if instance.content_type else None
         representation["instance_id"] = representation.pop("object_id")
         representation.pop("content_type_id")

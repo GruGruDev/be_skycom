@@ -67,6 +67,9 @@ class Products(TimeStampedModel, UUIDModel):
     class Meta:
         db_table = "tbl_Products"
         ordering = ["-created"]
+        permissions = [
+            ("view_variant_image", "Can view variant image"),
+        ]
 
 
 class ProductsVariants(TimeStampedModel, UUIDModel):
