@@ -171,7 +171,7 @@ class OrdersViewset(
             "address_shipping__ward__province",
             "source",
         )
-        .prefetch_related("shipping","type", "tags", "payments", "customer__phones", "payments__images", "warehouse_sheet_import_export_order")
+        .prefetch_related("transportation_care","type", "tags", "payments", "customer__phones", "payments__images", "warehouse_sheet_import_export_order")
         .all(),
         "retrieve": Orders.objects.select_related(
             "customer",
