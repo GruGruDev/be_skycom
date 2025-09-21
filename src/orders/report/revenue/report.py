@@ -22,7 +22,7 @@ def get_dashboard(queryset: QuerySet[Orders], date_from, date_to):
     # get order
     if queryset.exists():
         df_order = pd.DataFrame.from_records(
-            queryset.values("price_total_order_actual", "complete_time", "shipping__carrier_status", "customer_id", "customer__created")
+            queryset.values("price_total_order_actual", "complete_time", "address_shipping__carrier_status", "customer_id", "customer__created")
         ).sort_values(by=["complete_time"])
     else:
         return [], None
